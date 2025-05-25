@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Beat Minifier</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/terser@5.17.0/dist/bundle.min.js"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center p-6">
+  <h1 class="text-3xl font-bold mb-6">Beat Minifier</h1>
+
+  <div class="flex space-x-4 mb-4">
+    <button id="css-tab" class="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700">CSS</button>
+    <button id="js-tab" class="px-4 py-2 rounded bg-gray-700 hover:bg-gray-800">JavaScript</button>
+  </div>
+
+  <textarea id="input-code" placeholder="Paste your code here..." class="w-full max-w-4xl h-60 p-4 rounded bg-gray-800 text-white resize-none mb-4"></textarea>
+
+  <div class="flex space-x-4 mb-4">
+    <button onclick="minifyCode()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded">Minify</button>
+    <button onclick="copyOutput()" class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded">Copy</button>
+    <button onclick="clearFields()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded">Clear</button>
+  </div>
+
+  <textarea id="output-code" placeholder="Minified code will appear here..." class="w-full max-w-4xl h-60 p-4 rounded bg-gray-800 text-white resize-none" readonly></textarea>
+
+  <p id="error-message" class="text-red-500 mt-2 hidden"></p>
+
+  <div class="mt-6 w-full max-w-4xl h-32 bg-gray-800 flex items-center justify-center text-gray-400 border border-gray-700 rounded">
+    <!-- Ad Placeholder -->
+    Ad banner goes here
+  </div>
+
+  <script>
+    let currentMode = 'css';
+
+    document.getElementById('css-tab').onclick = () => switchMode('css');
+    document.getElementById('js-tab').onclick = () => switchMode('js');
+
+    function switchMode(mode) {
+      if (currentMode !== mode) {
+        clearFields();
+      }
+      currentMode = mode;
+      document.getElementById('css-tab').classList.toggle('bg-blue-600', mode === 'css');
+      document.getElementById('css-tab').classList.toggle('bg-gray-700', mode !== 'css');
+      document.getElementById('js-tab').classList.toggle('bg-blue-600', mode === 'js');
+      document.getElementById('js-tab').classList.toggle('bg-gray-700', mode !== 'js');
+    }
+
+    function isProbablyCSS(input) {
+      return /\{[^}]*\}/.test(input) && /[a-zA-Z-]+\s*:[^;]+;/.test(input);
+    }
+
+    function isProbablyJS(input) {
+      return /function|var|let|const|=>|if\s*\(|for\s*\(|while\s*\(|console\./.test(input);
+    }
+
+    async function minifyCode() {
+      const input = document.getElementById('input-code').value;
+      const outputField = document.getElementById('output-code');
+      const errorField = document.getElementById('error-message');
+      errorField.classList.add('hidden');
+
+      if (!input.trim()) {
+        errorField.textContent = 'Please enter some code to minify.';
+        errorField.classList.remove('hidden');
+        return;
+      }
+
+      if (currentMode === 'css') {
+        if (!isProbablyCSS(input)) {
+          errorField.textContent = 'The input does not appear to be valid CSS.';
+          errorField.classList.remove('hidden');
+          outputField.value = '';
+          return;
+        }
+        try {
+          const output = input.replace(/\/\*.*?\*\//gs, '')
+                              .replace(/\s+/g, ' ')
+                              .replace(/\s*([{};:,])\s*/g, '$1')
+                              .trim();
+          outputField.value = output;
+        } catch (err) {
+          outputField.value = '';
+          errorField.textContent = `Error: ${err.message}`;
+          errorField.classList.remove('hidden');
+        }
+      } else {
+        if (!isProbablyJS(input)) {
+          errorField.textContent = 'The input does not appear to be valid JavaScript.';
+          errorField.classList.remove('hidden');
+          outputField.value = '';
+          return;
+        }
+        try {
+          const result = await Terser.minify(input);
+          outputField.value = result.code || 'Minification failed.';
+        } catch (err) {
+          outputField.value = '';
+          errorField.textContent = `Error: ${err.message}`;
+          errorField.classList.remove('hidden');
+        }
+      }
+    }
+
+    function copyOutput() {
+      const output = document.getElementById('output-code');
+      output.select();
+      document.execCommand('copy');
+    }
+
+    function clearFields() {
+      document.getElementById('input-code').value = '';
+      document.getElementById('output-code').value = '';
+      document.getElementById('error-message').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>
